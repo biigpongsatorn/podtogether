@@ -18,5 +18,8 @@
   "bugs": {
     "url": "https://github.com/biigpongsatorn/podtogether/issues"
   },
-  "homepage": "https://github.com/biigpongsatorn/podtogether#readme"
+  "homepage": "https://github.com/biigpongsatorn/podtogether#readme",
+  "dependencies": {
+    "openzeppelin-solidity": "^2.5.0"
+  }
 }
