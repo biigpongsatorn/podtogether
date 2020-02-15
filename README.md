@@ -7,32 +7,17 @@ Pods allow users to pool their tickets together in PoolTogether.  They can excha
 Clone the repo and then install deps:
 
 ```
-$ yarn
-```
-
-Copy over .envrc and allow [direnv](https://direnv.net/):
-
-```
-$ cp .envrc.example .envrc
-$ direnv allow
+$ npm install
 ```
 
 Start the local Ethereum node using `ganache-cli`:
 
 ```
-$ yarn start
+$ npm run start
 ```
 
 Now deploy the contracts locally:
 
 ```
-$ yarn migrate
+$ npm run migrate
 ```
-
-To destroy your local deployment, run:
-
-```
-$ yarn reset
-```
-
-*Note: If you changed the mnemonic, you should update the ADMIN_ADDRESS variable in `.envrc` with another address (I use the second address listed when `ganache-cli` starts).*
