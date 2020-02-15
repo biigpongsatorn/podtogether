@@ -26,22 +26,33 @@ contract Pods is ERC20Mintable, ERC20Detailed {
 
   uint256 public rate = 1e18;
 
+  uint256 public totalDeposit;
+
   constructor(string memory _name, string memory _symbol, uint8 _decimal, address _daiAddress, address _poolTogetherAddress) ERC20Detailed(_name, _symbol, _decimal) public {
     daiAddress = _daiAddress;
     poolTogetherAddress = _poolTogetherAddress;
+    totalDeposit = 0;
   }
 
   function joinPod (uint256 _amount) public returns (bool) {
     require(_transferFrom(_amount), 'Can not transfer from this address');
     require(_depositPool(_amount), 'Can not deposit to PoolTogether');
-    uint256 currentRate = 
-    uint256 podDaiAmount = _amount.mul(currentRate);
+    uint256 rate = _calculateRate();
+    uint256 podDaiAmount = _amount.mul(1e18).div(rate);
+    _mint(_msgSender(), podDaiAmount);
+    return true;
   }
 
   function _depositPool (uint256 _amount) internal returns (bool) {
     PoolTogetherInterface poolTogether = PoolTogetherInterface(poolTogetherAddress);
     poolTogetherAddress.depositPool(_amount);
+    totalDeposit = totalDeposit.add(_amount);
     return bool
+  }
+
+  function _calculateRate() view returns (uint256) {
+    PoolTogetherInterface poolTogether = PoolTogetherInterface(poolTogetherAddress);
+    return poolTogether.balanceOf(address(this)).mul(1e18).div(totalDeposit);
   }
 
   function withdrawPod (uint256 _amount) public returns (bool) {
