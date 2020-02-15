@@ -5,10 +5,12 @@ import "openzeppelin-solidity/contracts/GSN/Context.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 interface DaiInterface {
-  function transfer(address _recipient, uint256 amount) public returns (bool);
+  function transfer(address _recipient, uint256 _amount) external returns (bool);
+  function transferFrom(address _sender, address _recipient, uint256 _amount) external returns (bool);
 }
 
-contract MockPooltogether is Ownable, Context {
+contract MockPooltogether is Ownable {
+  using SafeMath for uint256;
   uint256 public interestRate;
   uint256 public totalSupply;
 
@@ -30,6 +32,7 @@ contract MockPooltogether is Ownable, Context {
   }
 
   function depositPool (uint256 _amount) public {
+    _transferFrom(_amount);
     balances[_msgSender()] = balances[_msgSender()].add(_amount);
     totalSupply = totalSupply.add(_amount);
   }
@@ -40,17 +43,22 @@ contract MockPooltogether is Ownable, Context {
   }
 
   function calculateReward () public view returns (uint256) {
-    return totalSupply.mul(interestRate).div(100).mul(block.timestamp.sub(start)).div(oneYearPeriod));
+    return totalSupply.mul(interestRate).mul(block.timestamp.sub(startTime)).div(oneYearPeriod).div(100);
   }
 
-  function transferReward(address _winner, uint256 _amount) {
+  function _transferFrom(uint256 _amount) internal {
+    DaiInterface dai = DaiInterface(daiAddress);
+    dai.transferFrom(_msgSender(), address(this), _amount);
+  }
+
+  function _transferReward(address _winner, uint256 _amount) internal {
     DaiInterface dai = DaiInterface(daiAddress);
     dai.transfer(_winner, _amount);
   }
 
-  function claimReward (address winner) public {
-    uint256 reward = calculateReward();
-    transfer(winner, reward);
+  function claimReward (address _winner) public {
+    uint256 rewardAmount = calculateReward();
+    _transferReward(_winner, rewardAmount);
     startTime = block.timestamp;
   }
 }
