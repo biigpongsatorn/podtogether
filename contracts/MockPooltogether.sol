@@ -67,4 +67,8 @@ contract MockPooltogether is Ownable {
     _transferReward(_winner, rewardAmount);
     startTime = block.timestamp;
   }
+
+  function balanceOf (address _account) public returns (uint256) {
+    return balances[_account];
+  }
 }
