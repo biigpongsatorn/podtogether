@@ -9,7 +9,7 @@ interface DaiInterface {
   function transferFrom(address _sender, address _recipient, uint256 _amount) external returns (bool);
 }
 
-contract MockPooltogether is Ownable {
+contract MockPoolTogether is Ownable {
   using SafeMath for uint256;
   uint256 public interestRate;
   uint256 public totalSupply;
