@@ -23,7 +23,7 @@ contract MockPooltogether is Ownable {
 
   constructor(address _daiAddress) public {
     interestRate = 8;
-    startTime = block.timestamp;
+    startTime = 0;
     daiAddress = _daiAddress;
   }
 
@@ -34,6 +34,9 @@ contract MockPooltogether is Ownable {
   function depositPool (uint256 _amount) public {
     _transferFrom(_amount);
     balances[_msgSender()] = balances[_msgSender()].add(_amount);
+    if (totalSupply === 0) {
+      startTime = block.timestamp
+    }
     totalSupply = totalSupply.add(_amount);
   }
 
@@ -43,6 +46,9 @@ contract MockPooltogether is Ownable {
   }
 
   function calculateReward () public view returns (uint256) {
+    if (startTime === 0) {
+      return 0;
+    }
     return totalSupply.mul(interestRate).mul(block.timestamp.sub(startTime)).div(oneYearPeriod).div(100);
   }
 
