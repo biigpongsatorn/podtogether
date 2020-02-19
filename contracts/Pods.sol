@@ -1,24 +1,25 @@
 pragma solidity ^0.5.0;
 
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
-import "openzeppelin-solidity/contracts/GSN/Context.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import {ERC20Mintable} from "openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol";
-import {ERC20Detailed} from "openzeppelin-solidity/contracts/token/ERC20/ERC20Detailed.sol";
+import "./Ownable.sol";
+import "./Context.sol";
+import "./SafeMath.sol";
+import {ERC20Mintable} from "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v2.5.0/contracts/token/ERC20/ERC20Mintable.sol";
+import {ERC20Detailed} from "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v2.5.0/contracts/token/ERC20/ERC20Detailed.sol";
 
 interface DaiInterface {
   function transfer(address _recipient, uint256 _amount) external returns (bool);
   function transferFrom(address _sender, address _recipient, uint256 _amount) external returns (bool);
+  function approve(address spender, uint256 amount) external returns (bool);
 }
 
 interface PoolTogetherInterface {
   function depositPool (uint256 _amount) external;
   function withdrawPool (uint256 _amount) external;
   function claimReward (address _winner) external;
-  function balanceOf (address _account) external returns (uint256);
+  function balanceOf (address _account) external view returns (uint256);
 }
 
-contract Pods is ERC20Mintable, ERC20Detailed {
+contract Pods is ERC20Mintable, ERC20Detailed, Ownable {
   using SafeMath for uint256;
 
   address public daiAddress;
@@ -32,49 +33,80 @@ contract Pods is ERC20Mintable, ERC20Detailed {
     totalDeposit = 0;
   }
 
-  function joinPod (uint256 _amount) public returns (bool) {
+  function depositPod (uint256 _amount) public returns (bool) {
     require(_transferFrom(_amount), 'Can not transfer from this address');
-    uint256 podDaiAmount = getExpectedShareAmount(_amount);
+    uint256 shareAmount = getShareAmount(_amount);
+    _approveToDepositToPool(_amount);
     _depositPool(_amount);
-    _mint(_msgSender(), podDaiAmount);
+    _mint(_msgSender(), shareAmount);
     return true;
+  }
+
+  function _approveToDepositToPool (uint256 _amount) internal {
+      DaiInterface dai = DaiInterface(daiAddress);
+      dai.approve(poolTogetherAddress, _amount);
   }
 
   function _depositPool (uint256 _amount) internal returns (bool) {
     PoolTogetherInterface poolTogether = PoolTogetherInterface(poolTogetherAddress);
-    poolTogetherAddress.depositPool(_amount);
+    poolTogether.depositPool(_amount);
     totalDeposit = totalDeposit.add(_amount);
-    return bool
+    return true;
   }
 
-  function getExpectedShareAmount(uint256 _newAmount) public view returns (uint256) {
+  function getShareAmount(uint256 _newAmount) public view returns (uint256) {
+    if (totalSupply() == 0) {
+        return _newAmount;
+    }
     PoolTogetherInterface poolTogether = PoolTogetherInterface(poolTogetherAddress);
-    uint256 totalPoolBalance = poolTogether.balanceOf(address(this))
-    return totalPoolBalance.add(_newAmount).mul(totalSupply.div(totalPoolBalance)).sub(totalSupply)
+    uint256 totalPoolBalance = poolTogether.balanceOf(address(this));
+    uint256 rate = totalSupply().mul(1e18).div(totalPoolBalance);
+    return totalPoolBalance.add(_newAmount).mul(rate).div(1e18).sub(totalSupply());
   }
 
-  function withdrawPod (uint256 _amount) public returns (bool) {
-
+  function withdrawPod (uint256 _tokenAmount) public returns (bool) {
+    uint256 shareAmount = getRedeemedShareAmount(_tokenAmount);
+    require(shareAmount <= balanceOf(_msgSender()), 'Your balance is not enough');
+    _withdrawPool(_tokenAmount);
+    _transferTokenToUser(_tokenAmount);
+    _burn(_msgSender(), shareAmount);
+    return true;
   }
 
   function _withdrawPool (uint256 _amount) internal returns (bool) {
     PoolTogetherInterface poolTogether = PoolTogetherInterface(poolTogetherAddress);
-    poolTogetherAddress.withdrawPool(_amount);
+    poolTogether.withdrawPool(_amount);
     totalDeposit = totalDeposit.sub(_amount);
-    return bool
+    return true;
   }
 
-  function claimReward () public {
-
+  function calcurateRate () public view returns (uint256) {
+    PoolTogetherInterface poolTogether = PoolTogetherInterface(poolTogetherAddress);
+    uint256 totalPoolBalance = poolTogether.balanceOf(address(this));
+    return totalPoolBalance.mul(1e18).div(totalSupply());
   }
 
-  function getCurrentSupplyInPool () public return (uint256) {
+  function _transferTokenToUser (uint256 _amount) internal returns (bool) {
+    DaiInterface dai = DaiInterface(daiAddress);
+    dai.transfer(_msgSender(), _amount);
+    return true;
+  }
 
+  function getRedeemedShareAmount(uint256 _tokenAmount) public view returns (uint256) {
+    PoolTogetherInterface poolTogether = PoolTogetherInterface(poolTogetherAddress);
+    uint256 totalPoolBalance = poolTogether.balanceOf(address(this));
+    uint256 rate = totalPoolBalance.mul(1e18).div(totalSupply());
+    return _tokenAmount.mul(1e18).div(rate);
+  }
+
+  function getCurrentSupplyInPool () public view returns (uint256) {
+    PoolTogetherInterface poolTogether = PoolTogetherInterface(poolTogetherAddress);
+    return poolTogether.balanceOf(address(this));
   }
 
   function _transferFrom(uint256 _amount) internal  returns (bool) {
     DaiInterface dai = DaiInterface(daiAddress);
     dai.transferFrom(_msgSender(), address(this), _amount);
-    return bool
+    return true;
   }
 }
