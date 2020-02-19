@@ -388,7 +388,7 @@ contract Permitable is Sweepable {
     }
 }
 
-contract STBImplementation is RemoteBurnable, Permitable {
+contract Implementation is RemoteBurnable, Permitable {
     string public name;
     string public symbol;
     uint256 public decimals;
